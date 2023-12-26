@@ -1,44 +1,26 @@
-// app.js
-
 const express = require('express');
-const mongoose = require('mongoose');
-const http = require('http');
-const socketIo = require('socket.io');
-const ChatMessage = require('./models/chatMessage');
+const bodyParser = require('body-parser');
+const compromise = require('compromise');
+const path = require('path');
 
 const app = express();
-const server = http.createServer(app);
-const io = socketIo(server);
-const port = 3000;
+const PORT = process.env.PORT || 3000;
 
-Mongoose.connect(${process.env.DATABASE_URL}, { useNewUrlParser: true });
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// ... (previous code)
-const chatRoutes = require('./routes/chat');
-app.use('/chat', chatRoutes);
-
-// Socket.io logic
-io.on('connection', (socket) => {
-  console.log('A user connected');
-
-  // Handle chat messages
-  socket.on('chatMessage', async (data) => {
-    const { sender, receiver, message } = data;
-    const newMessage = new ChatMessage({ sender, receiver, message });
-    await newMessage.save();
-
-    // Broadcast the message to everyone in the room
-    io.emit('chatMessage', newMessage);
-  });
-
-  // Disconnect event
-  socket.on('disconnect', () => {
-    console.log('A user disconnected');
-  });
+// Your code for processing user input and providing recommendations
+app.post('/recommend', (req, res) => {
+  const userInput = req.body.text;
+  // Your logic for processing user input and providing recommendations
+  res.json({ recommendations: ['Car1', 'Car2', 'Car3'] });
 });
 
-// ... (previous code)
+// Serve the HTML file
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/index.html'));
+});
 
-server.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 });
