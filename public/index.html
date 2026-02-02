@@ -3,107 +3,512 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Car Recommendation Chatbot</title>
+  <title>Car Recommendation Chatbot with Cost Analysis</title>
   <style>
-    body {
-      font-family: 'Arial', sans-serif;
+    * {
       margin: 0;
       padding: 0;
-      background-color: #f8f8f8;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
     }
 
     #chatContainer {
-      max-width: 400px;
-      margin: 50px auto;
+      width: 100%;
+      max-width: 700px;
       background-color: #fff;
-      border-radius: 10px;
+      border-radius: 20px;
       overflow: hidden;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     }
 
     #chatHeader {
-      background-color: #4CAF50;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      padding: 15px;
+      padding: 25px;
       text-align: center;
-      font-size: 18px;
+    }
+
+    #chatHeader h1 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    #chatHeader p {
+      font-size: 14px;
+      opacity: 0.9;
     }
 
     #chatMessages {
-      padding: 15px;
+      padding: 20px;
       overflow-y: auto;
-      max-height: 300px;
+      max-height: 600px;
+      min-height: 300px;
+      background-color: #f8f9fa;
     }
 
     .message {
-      margin-bottom: 15px;
-      padding: 10px;
-      border-radius: 8px;
+      margin-bottom: 20px;
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .userMessage {
-      background-color: #4CAF50;
-      color: white;
       text-align: right;
     }
 
+    .userMessage .messageBubble {
+      display: inline-block;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 12px 18px;
+      border-radius: 18px 18px 0 18px;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+
     .botMessage {
-      background-color: #f2f2f2;
-      color: #333;
       text-align: left;
     }
 
-    #recommendationForm {
+    .botMessage .messageBubble {
+      display: inline-block;
+      background-color: white;
+      color: #333;
+      padding: 12px 18px;
+      border-radius: 18px 18px 18px 0;
+      max-width: 95%;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .carCard {
+      background: white;
+      border-radius: 12px;
+      padding: 18px;
+      margin: 12px 0;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      border-left: 4px solid #667eea;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .carCard:hover {
+      transform: translateX(5px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .carHeader {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .carTitle {
+      font-size: 19px;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .carPrice {
+      font-size: 19px;
+      font-weight: bold;
+      color: #28a745;
+    }
+
+    .carBasicInfo {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 8px;
+      margin: 10px 0;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .infoItem {
+      display: flex;
+      align-items: center;
+    }
+
+    .infoItem strong {
+      margin-right: 5px;
+      color: #333;
+    }
+
+    .costBreakdown {
+      margin-top: 15px;
       padding: 15px;
-      background-color: #f8f8f8;
-      border-top: 1px solid #ddd;
+      background-color: #f8f9fa;
+      border-radius: 8px;
+      border: 1px solid #e9ecef;
+    }
+
+    .costBreakdown h4 {
+      font-size: 14px;
+      color: #495057;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+    }
+
+    .costBreakdown h4::before {
+      content: "💰";
+      margin-right: 6px;
+    }
+
+    .costGrid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .costItem {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+    }
+
+    .costLabel {
+      color: #666;
+    }
+
+    .costValue {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .totalCostSection {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 2px solid #dee2e6;
+    }
+
+    .totalCostItem {
+      display: flex;
+      justify-content: space-between;
+      margin: 6px 0;
+      font-size: 13px;
+    }
+
+    .totalCostItem.highlight {
+      font-size: 16px;
+      font-weight: bold;
+      color: #667eea;
+      margin-top: 10px;
+    }
+
+    .carFeatures {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid #eee;
+    }
+
+    .carFeatures strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #333;
+      font-size: 13px;
+    }
+
+    .featureTags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .featureTag {
+      background-color: #e9ecef;
+      color: #495057;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+    }
+
+    #inputSection {
+      padding: 20px;
+      background-color: white;
+      border-top: 1px solid #dee2e6;
+    }
+
+    .inputGroup {
+      margin-bottom: 15px;
     }
 
     label {
       display: block;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
+      color: #333;
+      font-weight: 500;
     }
 
-    input {
+    input[type="text"] {
       width: 100%;
-      padding: 10px;
-      margin-bottom: 10px;
-      box-sizing: border-box;
+      padding: 12px 15px;
+      border: 2px solid #e9ecef;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: border-color 0.3s;
+    }
+
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
     }
 
     button {
-      background-color: #4CAF50;
+      width: 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
-      padding: 10px;
+      padding: 12px;
       border: none;
-      border-radius: 5px;
+      border-radius: 10px;
       cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
 
     button:hover {
-      background-color: #45a049;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .exampleQueries {
+      margin-top: 15px;
+      padding: 15px;
+      background-color: #f8f9fa;
+      border-radius: 10px;
+    }
+
+    .exampleQueries h3 {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
+    .exampleQuery {
+      display: inline-block;
+      background-color: white;
+      color: #667eea;
+      padding: 6px 12px;
+      border-radius: 15px;
+      font-size: 12px;
+      margin: 4px;
+      cursor: pointer;
+      border: 1px solid #e9ecef;
+      transition: all 0.2s;
+    }
+
+    .exampleQuery:hover {
+      background-color: #667eea;
+      color: white;
+      border-color: #667eea;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .mpgBadge {
+      background-color: #28a745;
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 8px;
     }
   </style>
 </head>
 <body>
   <div id="chatContainer">
-    <div id="chatHeader">Car Recommendation Chatbot</div>
-    <div id="chatMessages"></div>
-    <form id="recommendationForm">
-      <label for="userInput">Enter your preferences:</label>
-      <input type="text" id="userInput" name="userInput" required>
-      <button type="submit">Submit</button>
-    </form>
+    <div id="chatHeader">
+      <h1>🚗 Car Recommendation Chatbot</h1>
+      <p>Find your perfect car with complete cost breakdown!</p>
+      <div id="dataStatus" style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.2); border-radius: 8px; font-size: 12px;">
+        <span id="statusText">Loading government data...</span>
+        <button id="updateDataBtn" style="margin-left: 10px; padding: 4px 12px; font-size: 11px; background: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.5);">
+          🔄 Update Now
+        </button>
+      </div>
+    </div>
+    
+    <div id="chatMessages">
+      <div class="message botMessage">
+        <div class="messageBubble">
+          <p>Hi! I'm here to help you find the perfect car with full cost analysis. 🚗💰</p>
+          <p style="margin-top: 8px;">I can show you:</p>
+          <ul style="margin-top: 8px; margin-left: 20px; font-size: 13px;">
+            <li>Purchase price & sales tax</li>
+            <li>Annual insurance costs</li>
+            <li>Maintenance expenses</li>
+            <li>Fuel/electricity costs</li>
+            <li>5-year total cost of ownership</li>
+          </ul>
+          <p style="margin-top: 12px; font-weight: 600;">Try asking:</p>
+          <ul style="margin-top: 6px; margin-left: 20px; font-size: 13px;">
+            <li>"Show me affordable sedans with insurance costs"</li>
+            <li>"SUV under $35k with total cost breakdown"</li>
+            <li>"What's the cheapest electric car to own?"</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div id="inputSection">
+      <form id="recommendationForm">
+        <div class="inputGroup">
+          <label for="userInput">What are you looking for?</label>
+          <input type="text" id="userInput" name="userInput" 
+                 placeholder="E.g., reliable SUV with low insurance costs" required>
+        </div>
+        <button type="submit">Get Recommendations</button>
+      </form>
+
+      <div class="exampleQueries">
+        <h3>Quick examples (click to try):</h3>
+        <span class="exampleQuery">Cheapest to maintain</span>
+        <span class="exampleQuery">Low insurance sedan</span>
+        <span class="exampleQuery">Electric with cost breakdown</span>
+        <span class="exampleQuery">Hybrid under $30k total cost</span>
+        <span class="exampleQuery">SUV with fuel costs</span>
+        <span class="exampleQuery">Luxury car ownership costs</span>
+      </div>
+    </div>
   </div>
 
   <script>
-    document.getElementById('recommendationForm').addEventListener('submit', function (event) {
+    const chatMessages = document.getElementById('chatMessages');
+    const form = document.getElementById('recommendationForm');
+    const userInputField = document.getElementById('userInput');
+    const statusText = document.getElementById('statusText');
+    const updateDataBtn = document.getElementById('updateDataBtn');
+
+    // Load government data status on page load
+    loadDataStatus();
+
+    // Update data status every 5 minutes
+    setInterval(loadDataStatus, 5 * 60 * 1000);
+
+    // Manual update button
+    updateDataBtn.addEventListener('click', async function() {
+      this.disabled = true;
+      this.textContent = '⏳ Updating...';
+      
+      try {
+        const response = await fetch('/api/government-data/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          addMessage('✅ Government data updated successfully! Latest vehicle data is now available.', 'bot');
+          loadDataStatus();
+        } else {
+          addMessage('❌ Update failed: ' + result.error, 'bot');
+        }
+      } catch (error) {
+        addMessage('❌ Update error: ' + error.message, 'bot');
+      }
+      
+      this.disabled = false;
+      this.textContent = '🔄 Update Now';
+    });
+
+    async function loadDataStatus() {
+      try {
+        const response = await fetch('/api/government-data/info');
+        const data = await response.json();
+        
+        if (data.dataInfo) {
+          const hoursAgo = data.dataInfo.hoursAgo;
+          let statusMessage = '';
+          
+          if (hoursAgo === Infinity) {
+            statusMessage = '🔴 No government data loaded';
+          } else if (hoursAgo < 1) {
+            statusMessage = '🟢 Government data: Fresh (updated just now)';
+          } else if (hoursAgo < 24) {
+            statusMessage = `🟢 Government data: Updated ${hoursAgo}h ago`;
+          } else {
+            const daysAgo = Math.floor(hoursAgo / 24);
+            statusMessage = `🟡 Government data: ${daysAgo} day${daysAgo > 1 ? 's' : ''} old`;
+          }
+          
+          if (data.summary) {
+            statusMessage += ` | ${data.summary.totalVehicles} verified vehicles`;
+          }
+          
+          statusText.textContent = statusMessage;
+        }
+      } catch (error) {
+        console.error('Error loading data status:', error);
+        statusText.textContent = '⚠️ Unable to check data status';
+      }
+    }
+
+    // Example query click handlers
+    document.querySelectorAll('.exampleQuery').forEach(query => {
+      query.addEventListener('click', function() {
+        userInputField.value = this.textContent;
+        form.dispatchEvent(new Event('submit'));
+      });
+    });
+
+    form.addEventListener('submit', function (event) {
       event.preventDefault();
-      const userInput = document.getElementById('userInput').value;
-      const chatMessages = document.getElementById('chatMessages');
+      const userInput = userInputField.value.trim();
+      
+      if (!userInput) return;
 
       // Display user message
-      chatMessages.innerHTML += `<div class="message userMessage">${userInput}</div>`;
+      addMessage(userInput, 'user');
+
+      // Show loading indicator
+      const loadingId = addLoadingMessage();
+
+      // Clear input
+      userInputField.value = '';
 
       fetch('/recommend', {
         method: 'POST',
@@ -114,16 +519,164 @@
       })
       .then(response => response.json())
       .then(data => {
-        // Display bot message with recommendations
-        const recommendations = data.recommendations.join(', ');
-        chatMessages.innerHTML += `<div class="message botMessage">Recommendations: ${recommendations}</div>`;
+        // Remove loading indicator
+        removeLoadingMessage(loadingId);
+
+        if (data.error) {
+          addMessage(data.error, 'bot');
+          return;
+        }
+
+        if (data.recommendations && data.recommendations.length > 0) {
+          addCarRecommendations(data.recommendations, data.count, data.showTotalCost);
+        } else {
+          addMessage(data.message || "Sorry, I couldn't find any cars matching your criteria. Try broadening your search!", 'bot');
+        }
       })
       .catch(error => {
+        removeLoadingMessage(loadingId);
         console.error('Error:', error);
-        // Display an error message
-        chatMessages.innerHTML += `<div class="message botMessage">Sorry, an error occurred. Please try again.</div>`;
+        addMessage('Sorry, an error occurred. Please try again.', 'bot');
       });
     });
+
+    function addMessage(text, sender) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${sender}Message`;
+      messageDiv.innerHTML = `<div class="messageBubble">${text}</div>`;
+      chatMessages.appendChild(messageDiv);
+      scrollToBottom();
+    }
+
+    function addLoadingMessage() {
+      const loadingId = 'loading-' + Date.now();
+      const messageDiv = document.createElement('div');
+      messageDiv.id = loadingId;
+      messageDiv.className = 'message botMessage';
+      messageDiv.innerHTML = `
+        <div class="messageBubble">
+          <div class="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px;">Analyzing costs and finding the best cars...</p>
+          </div>
+        </div>
+      `;
+      chatMessages.appendChild(messageDiv);
+      scrollToBottom();
+      return loadingId;
+    }
+
+    function removeLoadingMessage(loadingId) {
+      const loadingElement = document.getElementById(loadingId);
+      if (loadingElement) {
+        loadingElement.remove();
+      }
+    }
+
+    function addCarRecommendations(recommendations, count, showTotalCost) {
+      const messageDiv = document.createElement('div');
+      messageDiv.className = 'message botMessage';
+      
+      let html = `<div class="messageBubble">
+        <p style="margin-bottom: 15px; font-weight: 600;">I found ${count} car${count > 1 ? 's' : ''} for you! Here are the top recommendations${showTotalCost ? ' with complete cost breakdown' : ''}:</p>
+      `;
+
+      recommendations.forEach(car => {
+        html += `
+          <div class="carCard">
+            <div class="carHeader">
+              <div class="carTitle">
+                ${car.make} ${car.model}
+                ${car.governmentVerified ? '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">✓ Gov Verified</span>' : ''}
+              </div>
+              <div class="carPrice">${car.priceFormatted}</div>
+            </div>
+            
+            <div class="carBasicInfo">
+              <div class="infoItem"><strong>Type:</strong> ${capitalizeFirst(car.type)}</div>
+              <div class="infoItem"><strong>Fuel:</strong> ${capitalizeFirst(car.fuelType)}</div>
+              <div class="infoItem"><strong>Seats:</strong> ${car.seats}</div>
+              <div class="infoItem">
+                <strong>MPG${car.fuelType === 'electric' ? 'e' : ''}:</strong> 
+                ${car.mpg}
+                ${car.mpg > 35 ? '<span class="mpgBadge">Efficient!</span>' : ''}
+              </div>
+            </div>
+
+            <div class="costBreakdown">
+              <h4>Annual Ownership Costs</h4>
+              <div class="costGrid">
+                <div class="costItem">
+                  <span class="costLabel">📋 Insurance/year:</span>
+                  <span class="costValue">$${car.costs.insurance.toLocaleString()}</span>
+                </div>
+                <div class="costItem">
+                  <span class="costLabel">🔧 Maintenance/year:</span>
+                  <span class="costValue">$${car.costs.maintenance.toLocaleString()}</span>
+                </div>
+                <div class="costItem">
+                  <span class="costLabel">⛽ Fuel/year:</span>
+                  <span class="costValue">$${car.costs.fuelPerYear.toLocaleString()}</span>
+                </div>
+                <div class="costItem">
+                  <span class="costLabel">💵 Sales Tax (6.5%):</span>
+                  <span class="costValue">$${Math.round(car.costs.salesTax).toLocaleString()}</span>
+                </div>
+              </div>
+              
+              ${car.totalCost ? `
+                <div class="totalCostSection">
+                  <div class="totalCostItem">
+                    <span>Purchase Price:</span>
+                    <span>$${car.totalCost.purchasePrice.toLocaleString()}</span>
+                  </div>
+                  <div class="totalCostItem">
+                    <span>Sales Tax:</span>
+                    <span>$${Math.round(car.totalCost.salesTax).toLocaleString()}</span>
+                  </div>
+                  <div class="totalCostItem">
+                    <span>Insurance (5 years):</span>
+                    <span>$${car.totalCost.insuranceTotal.toLocaleString()}</span>
+                  </div>
+                  <div class="totalCostItem">
+                    <span>Maintenance (5 years):</span>
+                    <span>$${car.totalCost.maintenanceTotal.toLocaleString()}</span>
+                  </div>
+                  <div class="totalCostItem">
+                    <span>Fuel (5 years):</span>
+                    <span>$${car.totalCost.fuelTotal.toLocaleString()}</span>
+                  </div>
+                  <div class="totalCostItem highlight">
+                    <span>🎯 Total 5-Year Cost:</span>
+                    <span>$${Math.round(car.totalCost.totalCost).toLocaleString()}</span>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+
+            <div class="carFeatures">
+              <strong>Features:</strong>
+              <div class="featureTags">
+                ${car.features.split(', ').map(f => `<span class="featureTag">${f}</span>`).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      html += '</div>';
+      messageDiv.innerHTML = html;
+      chatMessages.appendChild(messageDiv);
+      scrollToBottom();
+    }
+
+    function capitalizeFirst(str) {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function scrollToBottom() {
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
   </script>
 </body>
 </html>
