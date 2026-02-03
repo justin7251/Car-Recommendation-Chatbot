@@ -303,6 +303,25 @@ setInterval(async () => {
 this.dataDir = path.join(__dirname, 'data');
 ```
 
+### Live Government Data Endpoints (Multi‑Region)
+
+Set these environment variables to enable real-time data fetching for all regions:
+
+```
+US_EPA_VEHICLES_ZIP_URL=https://www.fueleconomy.gov/feg/epadata/vehicles.csv.zip
+US_EPA_CSV_URL=https://www.fueleconomy.gov/feg/epadata/vehicles.csv
+EU_EEA_CO2_ZIP_URL=https://www.eea.europa.eu/ds_resolveuid/O8703K1M2P
+EU_EEA_CO2_CSV_URL=<direct CSV download URL (optional)>
+UK_VCA_CSV_URL=<direct CSV download URL from VCA>
+JP_MLIT_CSV_URL=<direct CSV download URL from MLIT/e-Stat>
+KOREA_DATA_API_URL=<data.go.kr API endpoint>
+KOREA_DATA_API_KEY=<data.go.kr service key>
+GOV_DATA_MAX_VEHICLES=5000
+GOV_DATA_TIMEOUT_MS=30000
+```
+
+If a URL is missing for a region, that region is skipped and the app continues with the others.
+
 ---
 
 ## 🎨 UI Features

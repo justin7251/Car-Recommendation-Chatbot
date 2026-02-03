@@ -413,7 +413,8 @@ function getRecommendations(filters) {
   let recommendations = [...carDatabase];
 
   // Also search government data if available
-  const govResults = dataFetcher.search(filters.make || filters.type || '');
+  const govQuery = [filters.make, filters.type, filters.fuelType].filter(Boolean).join(' ');
+  const govResults = govQuery ? dataFetcher.search(govQuery) : [];
   
   // Merge government data with local database
   if (govResults && govResults.length > 0) {
@@ -425,9 +426,13 @@ function getRecommendations(filters) {
       );
 
       // Update with government data if found
-      if (existingCar && govCar.fuelCostPerYear) {
-        existingCar.costs.fuelPerYear = govCar.fuelCostPerYear;
-        existingCar.costs.mpg = govCar.combinedMPG || govCar.cityMPG || existingCar.costs.mpg;
+      if (existingCar) {
+        if (govCar.fuelCostPerYear) {
+          existingCar.costs.fuelPerYear = govCar.fuelCostPerYear;
+        }
+        if (govCar.combinedMPG || govCar.cityMPG) {
+          existingCar.costs.mpg = govCar.combinedMPG || govCar.cityMPG || existingCar.costs.mpg;
+        }
         existingCar.governmentVerified = true;
         existingCar.governmentSource = govCar.region;
       }
@@ -512,6 +517,15 @@ app.post('/recommend', (req, res) => {
 
   const formattedRecommendations = recommendations.map(car => {
     const totalCostData = calculateTotalCost(car);
+    const carKey = `${car.make.toLowerCase()} ${car.model.toLowerCase()}`;
+    const imageMap = {
+      'kia forte': '/images/kia_forte.png',
+      'hyundai elantra': '/images/hyundai_elantra.png',
+      'toyota corolla': '/images/toyota_corolla.png',
+      'honda civic': '/images/honda_civic.png',
+      'tesla model 3': '/images/tesla_model_3.png',
+      'tesla model y': '/images/tesla_model_y.png'
+    };
     
     return {
       make: car.make,
@@ -523,13 +537,17 @@ app.post('/recommend', (req, res) => {
       seats: car.seats,
       features: car.features.join(', '),
       mpg: car.costs.mpg,
+      imageUrl: imageMap[carKey] || null,
       costs: {
         insurance: car.costs.insurance,
         maintenance: car.costs.maintenance,
         fuelPerYear: car.costs.fuelPerYear,
-        salesTax: totalCostData.salesTax
+        salesTax: totalCostData.salesTax,
+        taxRate: car.costs.taxRate
       },
-      totalCost: filters.includeTotalCost ? totalCostData : null
+      totalCost: filters.includeTotalCost ? totalCostData : null,
+      governmentVerified: !!car.governmentVerified,
+      governmentSource: car.governmentSource || null
     };
   });
 

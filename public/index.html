@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Car Recommendation Chatbot with Cost Analysis</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700&family=Playfair+Display:wght@600;700&display=swap');
     * {
       margin: 0;
       padding: 0;
@@ -12,47 +13,71 @@
     }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      font-family: "Merriweather", "Georgia", serif;
+      background: radial-gradient(circle at 20% 10%, #2b2f38 0%, #1d2026 45%, #121418 100%);
       min-height: 100vh;
       display: flex;
       justify-content: center;
-      align-items: center;
-      padding: 20px;
+      align-items: stretch;
+      padding: 30px 24px;
+      color: #f8fafc;
     }
 
-    #chatContainer {
+    .appShell {
       width: 100%;
-      max-width: 700px;
-      background-color: #fff;
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      max-width: 1200px;
+      display: grid;
+      grid-template-columns: 1fr 0;
+      gap: 22px;
+      transition: grid-template-columns 0.35s ease;
     }
 
-    #chatHeader {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 25px;
-      text-align: center;
+    .appShell.compact {
+      grid-template-columns: minmax(0, 1fr) 420px;
     }
 
-    #chatHeader h1 {
-      font-size: 24px;
-      margin-bottom: 5px;
+    .mainPanel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04));
+      border-radius: 26px;
+      padding: 26px 24px;
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 820px;
+      width: 100%;
+      justify-self: center;
+      transition: max-width 0.35s ease, justify-self 0.35s ease;
     }
 
-    #chatHeader p {
-      font-size: 14px;
-      opacity: 0.9;
+    .appShell.compact .mainPanel {
+      max-width: none;
+      justify-self: stretch;
+    }
+
+    .panelHeader h1 {
+      font-size: 26px;
+      margin-bottom: 4px;
+      font-family: "Playfair Display", "Merriweather", serif;
+      letter-spacing: 0.2px;
+    }
+
+    .panelHeader p {
+      font-size: 12.5px;
+      color: rgba(248,250,252,0.65);
+      line-height: 1.4;
+      max-width: 420px;
     }
 
     #chatMessages {
-      padding: 20px;
+      padding: 10px 12px;
       overflow-y: auto;
-      max-height: 600px;
-      min-height: 300px;
-      background-color: #f8f9fa;
+      max-height: 420px;
+      min-height: 140px;
+      background-color: rgba(255,255,255,0.04);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.06);
     }
 
     .message {
@@ -77,7 +102,7 @@
 
     .userMessage .messageBubble {
       display: inline-block;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: rgba(255,255,255,0.08);
       color: white;
       padding: 12px 18px;
       border-radius: 18px 18px 0 18px;
@@ -91,22 +116,117 @@
 
     .botMessage .messageBubble {
       display: inline-block;
-      background-color: white;
-      color: #333;
-      padding: 12px 18px;
-      border-radius: 18px 18px 18px 0;
-      max-width: 95%;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      background: rgba(15, 23, 42, 0.55);
+      color: #e2e8f0;
+      padding: 14px 16px;
+      border-radius: 16px 16px 16px 4px;
+      max-width: 100%;
+      box-shadow: none;
+      font-size: 13px;
     }
 
     .carCard {
-      background: white;
-      border-radius: 12px;
-      padding: 18px;
-      margin: 12px 0;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      border-left: 4px solid #667eea;
+      background: linear-gradient(160deg, rgba(255,255,255,0.18), rgba(255,255,255,0.04));
+      border-radius: 18px;
+      padding: 16px 18px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
       transition: transform 0.2s, box-shadow 0.2s;
+      color: #f8fafc;
+    }
+
+    .recCard {
+      background: linear-gradient(160deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06));
+      border-radius: 18px;
+      padding: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .recImage {
+      height: 170px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9) 0%, rgba(226,232,240,0.6) 65%, rgba(148,163,184,0.6) 100%);
+      border: 1px solid rgba(255,255,255,0.12);
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+
+    .recImage img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 10px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .recImage.loading img {
+      opacity: 0;
+    }
+
+    .recImage.loaded img {
+      opacity: 1;
+    }
+
+    .imageLoader {
+      position: absolute;
+      inset: 12px;
+      border-radius: 12px;
+      background: linear-gradient(110deg, rgba(255,255,255,0.12) 8%, rgba(255,255,255,0.3) 18%, rgba(255,255,255,0.12) 33%);
+      background-size: 200% 100%;
+      animation: shimmer 1.2s linear infinite;
+    }
+
+    .recImage.loaded .imageLoader {
+      display: none;
+    }
+
+    @keyframes shimmer {
+      to { background-position-x: -200%; }
+    }
+
+    .recTitleRow {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+    }
+
+    .recTitle {
+      font-family: "Playfair Display", "Merriweather", serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .recPrice {
+      font-size: 14px;
+      font-weight: 700;
+      color: #8fd694;
+    }
+
+    .recStats {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 11.5px;
+      color: rgba(226, 232, 240, 0.75);
+    }
+
+    .recStat {
+      background: rgba(255,255,255,0.08);
+      padding: 4px 8px;
+      border-radius: 10px;
+      letter-spacing: 0.2px;
     }
 
     .carCard:hover {
@@ -118,28 +238,29 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
 
     .carTitle {
-      font-size: 19px;
-      font-weight: bold;
-      color: #667eea;
+      font-size: 18px;
+      font-weight: 700;
+      color: #f8fafc;
+      font-family: "Playfair Display", "Merriweather", serif;
     }
 
     .carPrice {
-      font-size: 19px;
-      font-weight: bold;
-      color: #28a745;
+      font-size: 18px;
+      font-weight: 700;
+      color: #8fd694;
     }
 
     .carBasicInfo {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-      gap: 8px;
-      margin: 10px 0;
-      font-size: 13px;
-      color: #666;
+      gap: 6px 16px;
+      margin: 6px 0 12px;
+      font-size: 12px;
+      color: rgba(226, 232, 240, 0.8);
     }
 
     .infoItem {
@@ -153,19 +274,22 @@
     }
 
     .costBreakdown {
-      margin-top: 15px;
-      padding: 15px;
-      background-color: #f8f9fa;
-      border-radius: 8px;
-      border: 1px solid #e9ecef;
+      margin-top: 12px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
     }
 
     .costBreakdown h4 {
-      font-size: 14px;
-      color: #495057;
+      font-size: 13px;
+      color: #e2e8f0;
       margin-bottom: 10px;
       display: flex;
       align-items: center;
+      letter-spacing: 0.2px;
+      font-weight: 700;
+      text-transform: uppercase;
     }
 
     .costBreakdown h4::before {
@@ -175,9 +299,9 @@
 
     .costGrid {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      font-size: 13px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px 12px;
+      font-size: 12px;
     }
 
     .costItem {
@@ -192,7 +316,7 @@
 
     .costValue {
       font-weight: 600;
-      color: #333;
+      color: #f8fafc;
     }
 
     .totalCostSection {
@@ -217,8 +341,32 @@
 
     .carFeatures {
       margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid #eee;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .cardActions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 12px;
+    }
+
+    .viewDetailsBtn {
+      background: rgba(255,255,255,0.88);
+      color: #0f172a;
+      border: 0;
+      border-radius: 12px;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 10px 18px rgba(0,0,0,0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .viewDetailsBtn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 22px rgba(0,0,0,0.3);
     }
 
     .carFeatures strong {
@@ -235,17 +383,55 @@
     }
 
     .featureTag {
-      background-color: #e9ecef;
-      color: #495057;
+      background-color: rgba(255,255,255,0.12);
+      color: #e2e8f0;
       padding: 4px 10px;
-      border-radius: 12px;
+      border-radius: 14px;
+      font-size: 11px;
+      letter-spacing: 0.2px;
+    }
+
+    .carMedia {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 160px;
+      border-radius: 16px;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9) 0%, rgba(226,232,240,0.6) 65%, rgba(148,163,184,0.6) 100%);
+      border: 1px solid rgba(255,255,255,0.12);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .carMedia::before {
+      content: "";
+      position: absolute;
+      width: 140px;
+      height: 70px;
+      border-radius: 50%;
+      background: rgba(148, 163, 184, 0.18);
+      bottom: 18px;
+    }
+
+    .carMedia span {
+      font-family: "Playfair Display", "Merriweather", serif;
       font-size: 12px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: #94a3b8;
+    }
+
+    .carMedia img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      padding: 12px;
     }
 
     #inputSection {
-      padding: 20px;
-      background-color: white;
-      border-top: 1px solid #dee2e6;
+      padding: 0;
+      background-color: transparent;
+      border-top: 0;
     }
 
     .inputGroup {
@@ -255,17 +441,19 @@
     label {
       display: block;
       margin-bottom: 8px;
-      color: #333;
+      color: #e2e8f0;
       font-weight: 500;
     }
 
     input[type="text"] {
       width: 100%;
       padding: 12px 15px;
-      border: 2px solid #e9ecef;
-      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 12px;
       font-size: 14px;
       transition: border-color 0.3s;
+      background: rgba(255,255,255,0.06);
+      color: #f8fafc;
     }
 
     input[type="text"]:focus {
@@ -275,11 +463,11 @@
 
     button {
       width: 100%;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #e2e8f0 0%, #cbd5f5 100%);
       color: white;
       padding: 12px;
       border: none;
-      border-radius: 10px;
+      border-radius: 12px;
       cursor: pointer;
       font-size: 16px;
       font-weight: 600;
@@ -298,7 +486,7 @@
     .exampleQueries {
       margin-top: 15px;
       padding: 15px;
-      background-color: #f8f9fa;
+      background-color: rgba(255,255,255,0.06);
       border-radius: 10px;
     }
 
@@ -310,21 +498,21 @@
 
     .exampleQuery {
       display: inline-block;
-      background-color: white;
-      color: #667eea;
+      background-color: rgba(255,255,255,0.08);
+      color: #e2e8f0;
       padding: 6px 12px;
       border-radius: 15px;
       font-size: 12px;
       margin: 4px;
       cursor: pointer;
-      border: 1px solid #e9ecef;
+      border: 1px solid rgba(255,255,255,0.12);
       transition: all 0.2s;
     }
 
     .exampleQuery:hover {
-      background-color: #667eea;
+      background-color: rgba(255,255,255,0.18);
       color: white;
-      border-color: #667eea;
+      border-color: rgba(255,255,255,0.2);
     }
 
     .loading {
@@ -357,63 +545,104 @@
       font-weight: 600;
       margin-left: 8px;
     }
+
+    @media (max-width: 900px) {
+      .appShell {
+        grid-template-columns: 1fr;
+      }
+      .mainPanel {
+        order: 1;
+      }
+      .recommendationsPanel {
+        order: 2;
+      }
+    }
+
+    .recommendationsPanel {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-height: calc(100vh - 80px);
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: opacity 0.35s ease, transform 0.35s ease;
+      width: 0;
+      overflow: hidden;
+    }
+
+    .recommendationsPanel.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+      width: 100%;
+      overflow: visible;
+    }
+
+    .recommendationsPanel h2 {
+      font-family: "Playfair Display", "Merriweather", serif;
+      font-size: 20px;
+      margin: 0 0 4px;
+      letter-spacing: 0.2px;
+    }
+
+    #recommendationGrid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      overflow-y: auto;
+      padding-right: 6px;
+      max-height: calc(100vh - 140px);
+    }
   </style>
 </head>
 <body>
-  <div id="chatContainer">
-    <div id="chatHeader">
-      <h1>🚗 Car Recommendation Chatbot</h1>
-      <p>Find your perfect car with complete cost breakdown!</p>
-      <div id="dataStatus" style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.2); border-radius: 8px; font-size: 12px;">
+  <div class="appShell">
+    <section class="mainPanel">
+      <div class="panelHeader">
+        <h1>Car Recommendations</h1>
+        <p>Based on your preferences, here's a clean breakdown of your best matches.</p>
+      </div>
+
+      <div id="dataStatus" style="padding: 8px 12px; background: rgba(255,255,255,0.08); border-radius: 10px; font-size: 12px; display: inline-flex; align-items: center; gap: 10px;">
         <span id="statusText">Loading government data...</span>
-        <button id="updateDataBtn" style="margin-left: 10px; padding: 4px 12px; font-size: 11px; background: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.5);">
-          🔄 Update Now
+        <button id="updateDataBtn" style="width: auto; padding: 6px 14px; font-size: 11px; background: rgba(255,255,255,0.2); border: 0; border-radius: 10px;">
+          Update Now
         </button>
       </div>
-    </div>
-    
-    <div id="chatMessages">
-      <div class="message botMessage">
-        <div class="messageBubble">
-          <p>Hi! I'm here to help you find the perfect car with full cost analysis. 🚗💰</p>
-          <p style="margin-top: 8px;">I can show you:</p>
-          <ul style="margin-top: 8px; margin-left: 20px; font-size: 13px;">
-            <li>Purchase price & sales tax</li>
-            <li>Annual insurance costs</li>
-            <li>Maintenance expenses</li>
-            <li>Fuel/electricity costs</li>
-            <li>5-year total cost of ownership</li>
-          </ul>
-          <p style="margin-top: 12px; font-weight: 600;">Try asking:</p>
-          <ul style="margin-top: 6px; margin-left: 20px; font-size: 13px;">
-            <li>"Show me affordable sedans with insurance costs"</li>
-            <li>"SUV under $35k with total cost breakdown"</li>
-            <li>"What's the cheapest electric car to own?"</li>
-          </ul>
+
+      <div id="chatMessages">
+        <div class="message botMessage">
+          <div class="messageBubble">
+            Based on your preferences, I can recommend cars with detailed ownership costs and verified government data when available.
+          </div>
         </div>
       </div>
-    </div>
 
-    <div id="inputSection">
-      <form id="recommendationForm">
-        <div class="inputGroup">
-          <label for="userInput">What are you looking for?</label>
-          <input type="text" id="userInput" name="userInput" 
-                 placeholder="E.g., reliable SUV with low insurance costs" required>
+      <div id="inputSection">
+        <form id="recommendationForm">
+          <div class="inputGroup">
+            <label for="userInput">What are you looking for?</label>
+            <input type="text" id="userInput" name="userInput" 
+                   placeholder="E.g., sporty electric SUV with long range" required>
+          </div>
+          <button type="submit">Get Recommendations</button>
+        </form>
+
+        <div class="exampleQueries">
+          <h3>Quick examples (click to try):</h3>
+          <span class="exampleQuery">Electric SUV long range</span>
+          <span class="exampleQuery">Hybrid under $30k total cost</span>
+          <span class="exampleQuery">Low insurance sedan</span>
+          <span class="exampleQuery">Luxury SUV with cost breakdown</span>
         </div>
-        <button type="submit">Get Recommendations</button>
-      </form>
-
-      <div class="exampleQueries">
-        <h3>Quick examples (click to try):</h3>
-        <span class="exampleQuery">Cheapest to maintain</span>
-        <span class="exampleQuery">Low insurance sedan</span>
-        <span class="exampleQuery">Electric with cost breakdown</span>
-        <span class="exampleQuery">Hybrid under $30k total cost</span>
-        <span class="exampleQuery">SUV with fuel costs</span>
-        <span class="exampleQuery">Luxury car ownership costs</span>
       </div>
-    </div>
+    </section>
+
+    <aside class="recommendationsPanel">
+      <h2>Top Matches</h2>
+      <div id="recommendationGrid"></div>
+    </aside>
   </div>
 
   <script>
@@ -422,9 +651,18 @@
     const userInputField = document.getElementById('userInput');
     const statusText = document.getElementById('statusText');
     const updateDataBtn = document.getElementById('updateDataBtn');
+    const recommendationGrid = document.getElementById('recommendationGrid');
+    const recommendationsPanel = document.querySelector('.recommendationsPanel');
+    const appShell = document.querySelector('.appShell');
+    let lastRecommendations = [];
+    const wikimediaImageCache = {};
+    const WIKI_CACHE_KEY = 'car_wiki_image_cache_v1';
+    const WIKI_CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
 
     // Load government data status on page load
     loadDataStatus();
+    recommendationsPanel.classList.remove('visible');
+    appShell.classList.remove('compact');
 
     // Update data status every 5 minutes
     setInterval(loadDataStatus, 5 * 60 * 1000);
@@ -454,6 +692,7 @@
       this.disabled = false;
       this.textContent = '🔄 Update Now';
     });
+
 
     async function loadDataStatus() {
       try {
@@ -531,6 +770,8 @@
           addCarRecommendations(data.recommendations, data.count, data.showTotalCost);
         } else {
           addMessage(data.message || "Sorry, I couldn't find any cars matching your criteria. Try broadening your search!", 'bot');
+          recommendationsPanel.classList.remove('visible');
+          appShell.classList.remove('compact');
         }
       })
       .catch(error => {
@@ -574,104 +815,190 @@
     }
 
     function addCarRecommendations(recommendations, count, showTotalCost) {
-      const messageDiv = document.createElement('div');
-      messageDiv.className = 'message botMessage';
-      
-      let html = `<div class="messageBubble">
-        <p style="margin-bottom: 15px; font-weight: 600;">I found ${count} car${count > 1 ? 's' : ''} for you! Here are the top recommendations${showTotalCost ? ' with complete cost breakdown' : ''}:</p>
-      `;
+      addMessage(`Found ${count} recommendation${count > 1 ? 's' : ''}. Displaying the top matches on the right.`, 'bot');
+      recommendationGrid.innerHTML = '';
+      lastRecommendations = recommendations;
+      recommendationsPanel.classList.add('visible');
+      appShell.classList.add('compact');
 
-      recommendations.forEach(car => {
+      let html = '';
+      recommendations.forEach((car, index) => {
+        const taxRatePct = car.costs.taxRate ? (car.costs.taxRate * 100).toFixed(1) : '6.5';
+        const imageSrc = car.imageUrl || '';
+        const fallbackSvg = buildPlaceholderSvg(car.make, car.model);
+        const govBadge = car.governmentVerified
+          ? `<span style="background:#28a745;color:white;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">✓ Gov Verified${car.governmentSource ? ' - ' + car.governmentSource.toUpperCase() : ''}</span>`
+          : '';
         html += `
-          <div class="carCard">
-            <div class="carHeader">
-              <div class="carTitle">
-                ${car.make} ${car.model}
-                ${car.governmentVerified ? '<span style="background:#28a745;color:white;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:8px;">✓ Gov Verified</span>' : ''}
-              </div>
-              <div class="carPrice">${car.priceFormatted}</div>
+          <div class="recCard">
+            <div class="recImage loading">
+              <div class="imageLoader"></div>
+              <img src="${imageSrc || fallbackSvg}"
+                   alt="${car.make} ${car.model}"
+                   loading="lazy"
+                   data-wiki="${imageSrc ? '0' : '1'}"
+                   data-make="${car.make}"
+                   data-model="${car.model}"
+                   onload="this.closest('.recImage').classList.remove('loading');this.closest('.recImage').classList.add('loaded');"
+                   onerror="this.onerror=null;this.src='${fallbackSvg}';this.closest('.recImage').classList.remove('loading');this.closest('.recImage').classList.add('loaded');">
             </div>
-            
-            <div class="carBasicInfo">
-              <div class="infoItem"><strong>Type:</strong> ${capitalizeFirst(car.type)}</div>
-              <div class="infoItem"><strong>Fuel:</strong> ${capitalizeFirst(car.fuelType)}</div>
-              <div class="infoItem"><strong>Seats:</strong> ${car.seats}</div>
-              <div class="infoItem">
-                <strong>MPG${car.fuelType === 'electric' ? 'e' : ''}:</strong> 
-                ${car.mpg}
-                ${car.mpg > 35 ? '<span class="mpgBadge">Efficient!</span>' : ''}
-              </div>
+            <div class="recTitleRow">
+              <div class="recTitle">${car.make} ${car.model}</div>
+              <div class="recPrice">${car.priceFormatted}</div>
             </div>
-
-            <div class="costBreakdown">
-              <h4>Annual Ownership Costs</h4>
-              <div class="costGrid">
-                <div class="costItem">
-                  <span class="costLabel">📋 Insurance/year:</span>
-                  <span class="costValue">$${car.costs.insurance.toLocaleString()}</span>
-                </div>
-                <div class="costItem">
-                  <span class="costLabel">🔧 Maintenance/year:</span>
-                  <span class="costValue">$${car.costs.maintenance.toLocaleString()}</span>
-                </div>
-                <div class="costItem">
-                  <span class="costLabel">⛽ Fuel/year:</span>
-                  <span class="costValue">$${car.costs.fuelPerYear.toLocaleString()}</span>
-                </div>
-                <div class="costItem">
-                  <span class="costLabel">💵 Sales Tax (6.5%):</span>
-                  <span class="costValue">$${Math.round(car.costs.salesTax).toLocaleString()}</span>
-                </div>
-              </div>
-              
-              ${car.totalCost ? `
-                <div class="totalCostSection">
-                  <div class="totalCostItem">
-                    <span>Purchase Price:</span>
-                    <span>$${car.totalCost.purchasePrice.toLocaleString()}</span>
-                  </div>
-                  <div class="totalCostItem">
-                    <span>Sales Tax:</span>
-                    <span>$${Math.round(car.totalCost.salesTax).toLocaleString()}</span>
-                  </div>
-                  <div class="totalCostItem">
-                    <span>Insurance (5 years):</span>
-                    <span>$${car.totalCost.insuranceTotal.toLocaleString()}</span>
-                  </div>
-                  <div class="totalCostItem">
-                    <span>Maintenance (5 years):</span>
-                    <span>$${car.totalCost.maintenanceTotal.toLocaleString()}</span>
-                  </div>
-                  <div class="totalCostItem">
-                    <span>Fuel (5 years):</span>
-                    <span>$${car.totalCost.fuelTotal.toLocaleString()}</span>
-                  </div>
-                  <div class="totalCostItem highlight">
-                    <span>🎯 Total 5-Year Cost:</span>
-                    <span>$${Math.round(car.totalCost.totalCost).toLocaleString()}</span>
-                  </div>
-                </div>
-              ` : ''}
+            <div class="recStats">
+              <span class="recStat">${capitalizeFirst(car.type)}</span>
+              <span class="recStat">${capitalizeFirst(car.fuelType)}</span>
+              <span class="recStat">${car.mpg} MPG${car.fuelType === 'electric' ? 'e' : ''}</span>
+              <span class="recStat">${car.seats} seats</span>
             </div>
-
-            <div class="carFeatures">
-              <strong>Features:</strong>
-              <div class="featureTags">
-                ${car.features.split(', ').map(f => `<span class="featureTag">${f}</span>`).join('')}
-              </div>
+            <div class="cardActions">
+              <button class="viewDetailsBtn" type="button" data-index="${index}">View Details</button>
             </div>
           </div>
         `;
       });
+      recommendationGrid.innerHTML = html;
+      hydrateWikimediaImages();
+    }
 
-      html += '</div>';
-      messageDiv.innerHTML = html;
-      chatMessages.appendChild(messageDiv);
+    async function hydrateWikimediaImages() {
+      const targets = recommendationGrid.querySelectorAll('img[data-wiki="1"]');
+      for (const img of targets) {
+        const make = img.dataset.make || '';
+        const model = img.dataset.model || '';
+        const url = await fetchWikimediaImageUrl(make, model);
+        if (url) {
+          img.src = url;
+          img.dataset.wiki = '0';
+        }
+      }
+    }
+
+    async function fetchWikimediaImageUrl(make, model) {
+      const key = `${make} ${model}`.trim().toLowerCase();
+      if (!key) return null;
+      if (wikimediaImageCache[key]) return wikimediaImageCache[key];
+      const cached = getCachedWikiUrl(key);
+      if (cached) {
+        wikimediaImageCache[key] = cached;
+        return cached;
+      }
+
+      const query = encodeURIComponent(`${make} ${model} car`);
+      const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${query}&srnamespace=6&srlimit=1&format=json&origin=*`;
+      const searchRes = await fetch(searchUrl).then(res => res.json()).catch(() => null);
+      const title = searchRes?.query?.search?.[0]?.title;
+      if (!title) {
+        wikimediaImageCache[key] = null;
+        setCachedWikiUrl(key, null);
+        return null;
+      }
+
+      const titleParam = encodeURIComponent(title);
+      const infoUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${titleParam}&prop=imageinfo&iiprop=url&iiurlwidth=800&format=json&origin=*`;
+      const infoRes = await fetch(infoUrl).then(res => res.json()).catch(() => null);
+      const pages = infoRes?.query?.pages || {};
+      const page = Object.values(pages)[0];
+      const imageInfo = page?.imageinfo?.[0];
+      const url = imageInfo?.thumburl || imageInfo?.url || null;
+      wikimediaImageCache[key] = url;
+      setCachedWikiUrl(key, url);
+      return url;
+    }
+
+    recommendationGrid.addEventListener('click', function (event) {
+      const target = event.target;
+      if (!target.classList.contains('viewDetailsBtn')) return;
+      const index = parseInt(target.dataset.index || '-1', 10);
+      const car = lastRecommendations[index];
+      if (!car) return;
+      addMessage(renderDetailCard(car), 'bot');
       scrollToBottom();
+    });
+
+    function renderDetailCard(car) {
+      const taxRatePct = car.costs.taxRate ? (car.costs.taxRate * 100).toFixed(1) : '6.5';
+      const totalCost = car.totalCost;
+      return `
+        <div>
+          <strong>${car.make} ${car.model}</strong> • ${capitalizeFirst(car.type)} • ${capitalizeFirst(car.fuelType)}
+          <div style="margin-top:6px;font-size:12px;color:rgba(226,232,240,0.8);">
+            Price: ${car.priceFormatted} • MPG${car.fuelType === 'electric' ? 'e' : ''}: ${car.mpg} • Seats: ${car.seats}
+          </div>
+          <div style="margin-top:8px;font-size:12px;">
+            Insurance/year: $${car.costs.insurance.toLocaleString()} • Maintenance/year: $${car.costs.maintenance.toLocaleString()} • Fuel/year: $${car.costs.fuelPerYear.toLocaleString()} • Sales Tax (${taxRatePct}%): $${Math.round(car.costs.salesTax).toLocaleString()}
+          </div>
+          ${totalCost ? `
+            <div style="margin-top:8px;font-size:12px;">
+              5‑Year Total: $${Math.round(totalCost.totalCost).toLocaleString()} (Insurance: $${totalCost.insuranceTotal.toLocaleString()}, Maintenance: $${totalCost.maintenanceTotal.toLocaleString()}, Fuel: $${totalCost.fuelTotal.toLocaleString()})
+            </div>
+          ` : ''}
+        </div>
+      `;
     }
 
     function capitalizeFirst(str) {
       return str.charAt(0).toUpperCase() + str.slice(1);
+    }
+
+    function slugify(value) {
+      return value.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    }
+
+    function buildImageUrl(car) {
+      return car.imageUrl || '';
+    }
+
+    function buildPlaceholderSvg(make, model) {
+      const title = `${make} ${model}`.trim();
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="420" height="240" viewBox="0 0 420 240">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="100%" stop-color="#e9eff6"/>
+            </linearGradient>
+          </defs>
+          <rect width="420" height="240" rx="20" fill="url(#bg)" />
+          <ellipse cx="210" cy="190" rx="110" ry="24" fill="#cbd5e1" opacity="0.5"/>
+          <path d="M90 150 L140 110 L290 110 L330 150 Z" fill="#9aa7b5"/>
+          <rect x="120" y="135" width="180" height="28" rx="10" fill="#7b8794"/>
+          <circle cx="140" cy="170" r="16" fill="#1f2937"/>
+          <circle cx="280" cy="170" r="16" fill="#1f2937"/>
+          <circle cx="140" cy="170" r="7" fill="#94a3b8"/>
+          <circle cx="280" cy="170" r="7" fill="#94a3b8"/>
+          <text x="210" y="70" font-size="18" font-family="Merriweather, serif" text-anchor="middle" fill="#6b7280">${title || 'Vehicle'}</text>
+        </svg>
+      `;
+      return `data:image/svg+xml;utf8,${encodeURIComponent(svg.trim())}`;
+    }
+
+    function getCachedWikiUrl(key) {
+      try {
+        const raw = localStorage.getItem(WIKI_CACHE_KEY);
+        if (!raw) return null;
+        const data = JSON.parse(raw);
+        const entry = data[key];
+        if (!entry) return null;
+        if (Date.now() - entry.ts > WIKI_CACHE_TTL_MS) {
+          return null;
+        }
+        return entry.url || null;
+      } catch {
+        return null;
+      }
+    }
+
+    function setCachedWikiUrl(key, url) {
+      try {
+        const raw = localStorage.getItem(WIKI_CACHE_KEY);
+        const data = raw ? JSON.parse(raw) : {};
+        data[key] = { url, ts: Date.now() };
+        localStorage.setItem(WIKI_CACHE_KEY, JSON.stringify(data));
+      } catch {
+        // Ignore cache failures (private mode, quota, etc.)
+      }
     }
 
     function scrollToBottom() {
