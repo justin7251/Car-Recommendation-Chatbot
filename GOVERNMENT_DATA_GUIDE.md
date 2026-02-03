@@ -4,6 +4,25 @@
 
 Your car recommendation chatbot now integrates **live government data** from official automotive agencies worldwide!
 
+## ✅ Required URLs & Keys
+
+To enable multi-region live data, set the following environment variables:
+
+```
+US_EPA_VEHICLES_ZIP_URL=https://www.fueleconomy.gov/feg/epadata/vehicles.csv.zip
+US_EPA_CSV_URL=https://www.fueleconomy.gov/feg/epadata/vehicles.csv
+EU_EEA_CO2_ZIP_URL=https://www.eea.europa.eu/ds_resolveuid/O8703K1M2P
+EU_EEA_CO2_CSV_URL=<direct CSV download URL (optional)>
+UK_VCA_CSV_URL=<direct CSV download URL from VCA>
+JP_MLIT_CSV_URL=<direct CSV download URL from MLIT/e-Stat>
+KOREA_DATA_API_URL=<data.go.kr API endpoint>
+KOREA_DATA_API_KEY=<data.go.kr service key>
+GOV_DATA_MAX_VEHICLES=5000
+GOV_DATA_TIMEOUT_MS=30000
+```
+
+If a region URL is not configured, that region will be skipped and the cache will still refresh for other regions.
+
 ## 📊 Data Sources
 
 ### United States 🇺🇸

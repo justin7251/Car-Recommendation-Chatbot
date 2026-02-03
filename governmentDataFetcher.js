@@ -2,6 +2,8 @@ const https = require('https');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { parse } = require('csv-parse/sync');
+const AdmZip = require('adm-zip');
 
 /**
  * Government Data Sources for Automotive Information
@@ -23,32 +25,36 @@ class GovernmentDataFetcher {
     // Government data source URLs
     this.dataSources = {
       us: {
-        fuelEconomy: 'https://www.fueleconomy.gov/feg/epadata/vehicles.csv',
+        fuelEconomyCsvZip: 'https://www.fueleconomy.gov/feg/epadata/vehicles.csv.zip',
         nhtsa: 'https://api.nhtsa.gov/products/vehicle/makes',
-        epaGuide: 'https://www.fueleconomy.gov/feg/download.shtml',
+        epaWebServices: 'https://www.fueleconomy.gov/feg/ws/index.shtml',
         description: 'US EPA Fuel Economy Data & NHTSA Vehicle Safety'
       },
       eu: {
-        emissions: 'https://data.europa.eu/api/hub/store/data/',
+        co2CsvZip: 'https://www.eea.europa.eu/ds_resolveuid/O8703K1M2P',
         eea: 'https://www.eea.europa.eu/data-and-maps/data/',
         description: 'EU Emissions & Environmental Agency Data'
       },
       uk: {
         vca: 'https://www.gov.uk/government/organisations/vehicle-certification-agency',
         dvla: 'https://www.gov.uk/government/statistical-data-sets/all-vehicles-veh01',
+        vcaFuelData: 'https://www.vehicle-certification-agency.gov.uk/fuel-consumption-co2/new-car-fuel-consumption/',
         description: 'UK Vehicle Certification Agency & DVLA Statistics'
       },
       japan: {
-        mlit: 'https://www.mlit.go.jp/jidosha/jidosha_tk10_000001.html',
+        mlit: 'https://www.mlit.go.jp/k-toukei/nenryousyouhiryou.html',
         description: 'Japan Ministry of Land, Infrastructure, Transport and Tourism'
       },
       korea: {
         molit: 'https://www.molit.go.kr/english/intro.jsp',
+        dataGoKr: 'https://www.data.go.kr/en/',
         description: 'Korea Ministry of Land, Infrastructure and Transport'
       }
     };
 
     this.updateInterval = 24 * 60 * 60 * 1000; // 24 hours
+    this.requestTimeoutMs = parseInt(process.env.GOV_DATA_TIMEOUT_MS || '30000', 10);
+    this.maxVehiclesPerRegion = parseInt(process.env.GOV_DATA_MAX_VEHICLES || '5000', 10);
   }
 
   /**
@@ -71,26 +77,37 @@ class GovernmentDataFetcher {
   /**
    * Fetch data from a URL
    */
-  async fetchURL(url) {
+  async fetchText(url) {
+    const buffer = await this.fetchBuffer(url);
+    return buffer.toString('utf8');
+  }
+
+  async fetchBuffer(url) {
     return new Promise((resolve, reject) => {
       const protocol = url.startsWith('https') ? https : http;
-      
-      protocol.get(url, (res) => {
-        let data = '';
-        
+
+      const request = protocol.get(url, (res) => {
+        const chunks = [];
+
         res.on('data', (chunk) => {
-          data += chunk;
+          chunks.push(chunk);
         });
-        
+
         res.on('end', () => {
           if (res.statusCode === 200) {
-            resolve(data);
+            resolve(Buffer.concat(chunks));
           } else {
             reject(new Error(`HTTP ${res.statusCode}: ${res.statusMessage}`));
           }
         });
-      }).on('error', (err) => {
+      });
+
+      request.on('error', (err) => {
         reject(err);
+      });
+
+      request.setTimeout(this.requestTimeoutMs, () => {
+        request.destroy(new Error(`Request timed out after ${this.requestTimeoutMs}ms`));
       });
     });
   }
@@ -99,26 +116,117 @@ class GovernmentDataFetcher {
    * Parse CSV data (for EPA fuel economy data)
    */
   parseCSV(csvText) {
-    const lines = csvText.split('\n');
-    if (lines.length < 2) return [];
-    
-    const headers = lines[0].split(',').map(h => h.trim());
-    const data = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue;
-      
-      const values = lines[i].split(',');
-      const row = {};
-      
-      headers.forEach((header, index) => {
-        row[header] = values[index]?.trim() || '';
-      });
-      
-      data.push(row);
+    return parse(csvText, {
+      columns: true,
+      skip_empty_lines: true,
+      relax_quotes: true,
+      relax_column_count: true,
+      trim: true
+    });
+  }
+
+  extractCsvFromZip(zipBuffer, preferredName) {
+    const zip = new AdmZip(zipBuffer);
+    const entries = zip.getEntries().filter(entry =>
+      entry.entryName.toLowerCase().endsWith('.csv')
+    );
+
+    if (entries.length === 0) {
+      throw new Error('No CSV file found in zip archive');
     }
-    
-    return data;
+
+    let entry = entries[0];
+    if (preferredName) {
+      const preferred = entries.find(e =>
+        e.entryName.toLowerCase().includes(preferredName.toLowerCase())
+      );
+      if (preferred) entry = preferred;
+    }
+
+    return entry.getData().toString('utf8');
+  }
+
+  normalizeNumber(value) {
+    if (value === undefined || value === null || value === '') return null;
+    const num = Number(String(value).replace(/,/g, '').trim());
+    return Number.isFinite(num) ? num : null;
+  }
+
+  pickFirst(row, keys) {
+    for (const key of keys) {
+      if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+        return row[key];
+      }
+      const altKey = Object.keys(row).find(k => k.toLowerCase() === key.toLowerCase());
+      if (altKey && row[altKey] !== undefined && row[altKey] !== null && row[altKey] !== '') {
+        return row[altKey];
+      }
+    }
+    return null;
+  }
+
+  buildUrlWithServiceKey(url, serviceKey) {
+    if (!serviceKey) return url;
+    if (/serviceKey=/i.test(url)) return url;
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}serviceKey=${encodeURIComponent(serviceKey)}`;
+  }
+
+  extractItemsFromJson(data) {
+    if (!data) return [];
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data.items)) return data.items;
+    if (Array.isArray(data.data)) return data.data;
+    if (Array.isArray(data.results)) return data.results;
+    if (data.response?.body?.items?.item) {
+      const items = data.response.body.items.item;
+      return Array.isArray(items) ? items : [items];
+    }
+    if (data.result && Array.isArray(data.result)) return data.result;
+    return [];
+  }
+
+  normalizeCsvVehicles(rows, region) {
+    const vehicles = [];
+    const makeKeys = ['make', 'Make', 'manufacturer', 'Manufacturer', 'ManufacturerName', 'Brand'];
+    const modelKeys = ['model', 'Model', 'ModelName', 'CommercialName', 'VehicleName', 'Variant', 'Type'];
+    const yearKeys = ['year', 'Year', 'ModelYear', 'model_year'];
+    const fuelKeys = ['fuelType', 'FuelType', 'Fuel Type', 'fuel', 'Fuel'];
+    const co2Keys = ['co2', 'CO2', 'CO2g/km', 'CO2 (g/km)', 'co2Emissions', 'CO2 emissions g/km'];
+    const consumptionKeys = ['fuelConsumption', 'Fuel consumption', 'Fuel Consumption', 'FC', 'FC (l/100km)', 'FuelConsumption'];
+
+    for (const row of rows) {
+      const make = this.pickFirst(row, makeKeys);
+      const model = this.pickFirst(row, modelKeys);
+      const year = this.normalizeNumber(this.pickFirst(row, yearKeys));
+      const fuelType = this.pickFirst(row, fuelKeys);
+      const co2Emissions = this.normalizeNumber(this.pickFirst(row, co2Keys));
+      const fuelConsumption = this.normalizeNumber(this.pickFirst(row, consumptionKeys));
+
+      if (!make || !model) continue;
+
+      vehicles.push({
+        make,
+        model,
+        year,
+        fuelType,
+        co2Emissions,
+        fuelConsumption,
+        region
+      });
+
+      if (vehicles.length >= this.maxVehiclesPerRegion) break;
+    }
+
+    return vehicles;
+  }
+
+  isZipUrl(url) {
+    return typeof url === 'string' && url.toLowerCase().endsWith('.zip');
+  }
+
+  isCsvUrl(url) {
+    return typeof url === 'string' && url.toLowerCase().endsWith('.csv');
   }
 
   /**
@@ -128,39 +236,66 @@ class GovernmentDataFetcher {
   async fetchUSData() {
     try {
       console.log('Fetching US EPA data...');
-      
-      // For demonstration, we'll create structured data
-      // In production, you would fetch from actual EPA API
+
+      const csvZipUrl = process.env.US_EPA_VEHICLES_ZIP_URL || this.dataSources.us.fuelEconomyCsvZip;
+      const csvUrl = process.env.US_EPA_CSV_URL;
+      const sourceUrl = csvUrl || csvZipUrl;
+      let csvText = '';
+
+      if (this.isZipUrl(sourceUrl)) {
+        const zipBuffer = await this.fetchBuffer(sourceUrl);
+        csvText = this.extractCsvFromZip(zipBuffer, 'vehicles.csv');
+      } else if (this.isCsvUrl(sourceUrl)) {
+        csvText = await this.fetchText(sourceUrl);
+      } else {
+        console.warn('US EPA URL must be a .csv or .zip. Skipping US data fetch.');
+        return {
+          source: 'US EPA Fuel Economy',
+          lastUpdated: new Date().toISOString(),
+          vehicles: [],
+          apiEndpoint: sourceUrl,
+          notes: 'Invalid URL (expected .csv or .zip)'
+        };
+      }
+
+      const rows = this.parseCSV(csvText);
+
+      const vehicles = [];
+      for (const row of rows) {
+        const make = row.make || row.Make;
+        const model = row.model || row.Model;
+        const year = this.normalizeNumber(row.year || row.Year);
+        if (!make || !model || !year) continue;
+
+        const combinedMPG = this.normalizeNumber(row.comb08 || row.combE);
+        const cityMPG = this.normalizeNumber(row.city08 || row.cityE);
+        const highwayMPG = this.normalizeNumber(row.highway08 || row.highwayE);
+        const fuelCostPerYear = this.normalizeNumber(row.fuelCost08 || row.fuelCostA08);
+        const co2Emissions = this.normalizeNumber(row.co2TailpipeGpm);
+        const fuelType = row.fuelType1 || row.FuelType1 || row.fuelType;
+
+        vehicles.push({
+          make,
+          model,
+          year,
+          fuelType,
+          cityMPG,
+          highwayMPG,
+          combinedMPG,
+          co2Emissions,
+          fuelCostPerYear,
+          region: 'us'
+        });
+
+        if (vehicles.length >= this.maxVehiclesPerRegion) break;
+      }
+
       const usData = {
         source: 'US EPA Fuel Economy',
         lastUpdated: new Date().toISOString(),
-        vehicles: [
-          {
-            make: 'Toyota',
-            model: 'Camry',
-            year: 2024,
-            fuelType: 'Hybrid',
-            cityMPG: 51,
-            highwayMPG: 53,
-            combinedMPG: 52,
-            co2Emissions: 171, // g/mi
-            fuelCostPerYear: 900
-          },
-          {
-            make: 'Honda',
-            model: 'Civic',
-            year: 2024,
-            fuelType: 'Gasoline',
-            cityMPG: 31,
-            highwayMPG: 40,
-            combinedMPG: 35,
-            co2Emissions: 253,
-            fuelCostPerYear: 1300
-          },
-          // Add more vehicles as they become available from API
-        ],
-        apiEndpoint: this.dataSources.us.fuelEconomy,
-        notes: 'Based on 15,000 miles annually, 55% city and 45% highway driving'
+        vehicles,
+        apiEndpoint: sourceUrl,
+        notes: 'FuelEconomy.gov vehicles.csv.zip (city/highway/combined MPG and annual fuel costs)'
       };
       
       return usData;
@@ -176,32 +311,37 @@ class GovernmentDataFetcher {
   async fetchEUData() {
     try {
       console.log('Fetching EU emissions data...');
-      
+
+      const co2ZipUrl = process.env.EU_EEA_CO2_ZIP_URL || this.dataSources.eu.co2CsvZip;
+      const co2CsvUrl = process.env.EU_EEA_CO2_CSV_URL;
+      const sourceUrl = co2CsvUrl || co2ZipUrl;
+      let csvText = '';
+
+      if (this.isZipUrl(sourceUrl)) {
+        const zipBuffer = await this.fetchBuffer(sourceUrl);
+        csvText = this.extractCsvFromZip(zipBuffer);
+      } else if (this.isCsvUrl(sourceUrl)) {
+        csvText = await this.fetchText(sourceUrl);
+      } else {
+        console.warn('EU EEA URL must be a .csv or .zip. Skipping EU data fetch.');
+        return {
+          source: 'EU Environmental Agency',
+          lastUpdated: new Date().toISOString(),
+          vehicles: [],
+          apiEndpoint: sourceUrl,
+          notes: 'Invalid URL (expected .csv or .zip)'
+        };
+      }
+
+      const rows = this.parseCSV(csvText);
+      const vehicles = this.normalizeCsvVehicles(rows, 'eu');
+
       const euData = {
         source: 'EU Environmental Agency',
         lastUpdated: new Date().toISOString(),
-        vehicles: [
-          {
-            make: 'Volkswagen',
-            model: 'Golf',
-            year: 2024,
-            fuelType: 'Diesel',
-            co2Emissions: 112, // g/km
-            euroStandard: 'Euro 6d',
-            fuelConsumption: 4.3 // L/100km
-          },
-          {
-            make: 'BMW',
-            model: '3 Series',
-            year: 2024,
-            fuelType: 'Gasoline',
-            co2Emissions: 142,
-            euroStandard: 'Euro 6d',
-            fuelConsumption: 6.1
-          }
-        ],
-        apiEndpoint: this.dataSources.eu.emissions,
-        notes: 'WLTP testing procedure data'
+        vehicles,
+        apiEndpoint: sourceUrl,
+        notes: 'EEA CO2 passenger cars dataset (CSV in zip, WLTP data)'
       };
       
       return euData;
@@ -217,23 +357,32 @@ class GovernmentDataFetcher {
   async fetchUKData() {
     try {
       console.log('Fetching UK VCA data...');
-      
+
+      const ukCsvUrl = process.env.UK_VCA_CSV_URL;
+      let vehicles = [];
+      if (ukCsvUrl) {
+        if (this.isZipUrl(ukCsvUrl)) {
+          const zipBuffer = await this.fetchBuffer(ukCsvUrl);
+          const csvText = this.extractCsvFromZip(zipBuffer);
+          const rows = this.parseCSV(csvText);
+          vehicles = this.normalizeCsvVehicles(rows, 'uk');
+        } else if (this.isCsvUrl(ukCsvUrl)) {
+          const csvText = await this.fetchText(ukCsvUrl);
+          const rows = this.parseCSV(csvText);
+          vehicles = this.normalizeCsvVehicles(rows, 'uk');
+        } else {
+          console.warn('UK_VCA_CSV_URL must be a direct .csv or .zip download. Skipping UK data fetch.');
+        }
+      } else {
+        console.warn('UK_VCA_CSV_URL not set. Skipping UK data fetch.');
+      }
+
       const ukData = {
         source: 'UK Vehicle Certification Agency',
         lastUpdated: new Date().toISOString(),
-        vehicles: [
-          {
-            make: 'Land Rover',
-            model: 'Range Rover',
-            year: 2024,
-            fuelType: 'Hybrid',
-            co2Emissions: 75, // g/km
-            taxBand: 'B',
-            annualTax: 180 // GBP
-          }
-        ],
-        apiEndpoint: this.dataSources.uk.vca,
-        notes: 'UK road tax bands and emissions data'
+        vehicles,
+        apiEndpoint: ukCsvUrl || this.dataSources.uk.vcaFuelData,
+        notes: ukCsvUrl ? 'VCA fuel consumption CSV download' : 'No CSV URL configured'
       };
       
       return ukData;
@@ -249,30 +398,32 @@ class GovernmentDataFetcher {
   async fetchJapanData() {
     try {
       console.log('Fetching Japan MLIT data...');
-      
+
+      const jpCsvUrl = process.env.JP_MLIT_CSV_URL;
+      let vehicles = [];
+      if (jpCsvUrl) {
+        if (this.isZipUrl(jpCsvUrl)) {
+          const zipBuffer = await this.fetchBuffer(jpCsvUrl);
+          const csvText = this.extractCsvFromZip(zipBuffer);
+          const rows = this.parseCSV(csvText);
+          vehicles = this.normalizeCsvVehicles(rows, 'japan');
+        } else if (this.isCsvUrl(jpCsvUrl)) {
+          const csvText = await this.fetchText(jpCsvUrl);
+          const rows = this.parseCSV(csvText);
+          vehicles = this.normalizeCsvVehicles(rows, 'japan');
+        } else {
+          console.warn('JP_MLIT_CSV_URL must be a direct .csv or .zip download. Skipping Japan data fetch.');
+        }
+      } else {
+        console.warn('JP_MLIT_CSV_URL not set. Skipping Japan data fetch.');
+      }
+
       const japanData = {
         source: 'Japan Ministry of Land, Infrastructure, Transport',
         lastUpdated: new Date().toISOString(),
-        vehicles: [
-          {
-            make: 'Toyota',
-            model: 'Prius',
-            year: 2024,
-            fuelType: 'Hybrid',
-            fuelEconomy: 28.0, // km/L
-            emissionStandard: 'Post New Long-term Regulation'
-          },
-          {
-            make: 'Nissan',
-            model: 'Leaf',
-            year: 2024,
-            fuelType: 'Electric',
-            range: 458, // km (WLTC mode)
-            batteryCapacity: 62 // kWh
-          }
-        ],
-        apiEndpoint: this.dataSources.japan.mlit,
-        notes: 'JC08 and WLTC mode fuel economy data'
+        vehicles,
+        apiEndpoint: jpCsvUrl || this.dataSources.japan.mlit,
+        notes: jpCsvUrl ? 'MLIT fuel economy CSV download' : 'No CSV URL configured'
       };
       
       return japanData;
@@ -288,32 +439,38 @@ class GovernmentDataFetcher {
   async fetchKoreaData() {
     try {
       console.log('Fetching Korea MOLIT data...');
-      
+
+      const apiUrl = process.env.KOREA_DATA_API_URL;
+      const apiKey = process.env.KOREA_DATA_API_KEY;
+      let vehicles = [];
+
+      if (apiUrl) {
+        if (!apiKey) {
+          console.warn('KOREA_DATA_API_KEY is not set. API may reject requests.');
+        }
+        const urlWithKey = this.buildUrlWithServiceKey(apiUrl, apiKey);
+        const responseBuffer = await this.fetchBuffer(urlWithKey);
+        let data = null;
+        try {
+          data = JSON.parse(responseBuffer.toString('utf8'));
+        } catch (error) {
+          console.error('Error parsing Korea API JSON:', error);
+        }
+
+        if (data) {
+          const items = this.extractItemsFromJson(data);
+          vehicles = this.normalizeCsvVehicles(items, 'korea');
+        }
+      } else {
+        console.warn('KOREA_DATA_API_URL not set. Skipping Korea data fetch.');
+      }
+
       const koreaData = {
         source: 'Korea Ministry of Land, Infrastructure and Transport',
         lastUpdated: new Date().toISOString(),
-        vehicles: [
-          {
-            make: 'Hyundai',
-            model: 'Ioniq 5',
-            year: 2024,
-            fuelType: 'Electric',
-            range: 481, // km
-            batteryCapacity: 77.4, // kWh
-            efficiency: 5.1 // km/kWh
-          },
-          {
-            make: 'Kia',
-            model: 'EV6',
-            year: 2024,
-            fuelType: 'Electric',
-            range: 528,
-            batteryCapacity: 77.4,
-            efficiency: 5.4
-          }
-        ],
-        apiEndpoint: this.dataSources.korea.molit,
-        notes: 'Korean certification data'
+        vehicles,
+        apiEndpoint: apiUrl || this.dataSources.korea.dataGoKr,
+        notes: apiUrl ? 'data.go.kr vehicle efficiency API' : 'No API URL configured'
       };
       
       return koreaData;
@@ -466,6 +623,7 @@ class GovernmentDataFetcher {
    * Search in government data
    */
   search(query) {
+    if (!query || !query.trim()) return [];
     const summary = this.getSummary();
     if (!summary || !summary.searchIndex) return [];
 
